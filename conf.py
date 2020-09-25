@@ -10,21 +10,34 @@ class Config:
             db_path: str = None
     ):
         attributes = [conf_path, db_filename, db_path]
+
         for attrib in attributes:
             if not isinstance(attrib, (str, type(None))):
                 raise TypeError(f'{attrib} must be str or None')
+
         if conf_path is None:
+            if not os.path.exists(os.path.join('.', 'conf')):
+                os.mkdir(os.path.join('.', 'conf'))
             self.__conf_path = os.path.join('.', 'conf', 'config.ini')
         else:
+            if not os.path.exists(conf_path):
+                os.mkdir(conf_path)
             self.__conf_path = conf_path
+
         if db_path is None:
+            if not os.path.exists(os.path.join('.', 'storage')):
+                os.mkdir(os.path.join('.', 'storage'))
             self.__db_path = os.path.join('.', 'storage')
         else:
+            if not os.path.exists(db_path):
+                os.mkdir(db_path)
             self.__db_path = db_path
+
         if db_filename is None:
             self.__db_filename = 'library.db'
         else:
             self.__db_filename = db_filename
+
         self.__conf_parser = configparser.ConfigParser()
         self.__bases = 'Databases'
         self.__path = 'Path'
