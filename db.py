@@ -2,8 +2,8 @@ import sqlite3
 
 
 class DBConnection:
-    def __init__(self, database):
-        self.__connection = sqlite3.connect(database)
+    def __init__(self):
+        self.__connection = None
         self.__cursor = None
 
     def __enter__(self):
@@ -16,3 +16,9 @@ class DBConnection:
         else:
             self.__cursor.commit()
         self.__cursor.close()
+
+
+class Connect_sqlite(DBConnection):
+    def __init__(self, database):
+        self.__connection = sqlite3.connect(database)
+        self.__cursor = None
