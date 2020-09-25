@@ -1,6 +1,4 @@
-import os
-
-from db import DBConnection
+from db import Connect_sqlite
 
 
 class Book:
@@ -17,13 +15,14 @@ class Book:
         str_attributes = [name, author, genre, publishing]
         int_attributes = [bid, year]
 
-        for attrib in str_attributes:
-            if not isinstance(attrib, (str, type(None))):
-                raise TypeError(f'{attrib} must be str or None')
+        for attr in str_attributes:
+            if not isinstance(attr, (str, type(None))):
+                raise TypeError(f'{attr} must be str or None')
 
-        for attrib in int_attributes:
-            if not isinstance(attrib, (int, type(None))):
-                raise TypeError(f'{attrib} must be int or None')
+        for attr in int_attributes:
+            if not isinstance(attr, (int, type(None))):
+                raise TypeError(f'{attr} must be int or None')
+
         self.__bid = bid
         self.__name = name
         self.__author = author
@@ -94,87 +93,57 @@ class Book:
 
 class Library:
     def __init__(self, database):
-        if not isinstance(database, str):
-            raise TypeError(f'{database} must be str')
+        self.__con = Connect_sqlite(database)
 
-        if not os.path.exists(database):
-            raise ValueError(f'{database} file not exists')
-
-        self.__con = DBConnection(database)
-
-        with self.__con as cursor:
-            execute_msg = 'CREATE TABLE IF NOT EXISTS BOOKS(' \
-                          'id integer PRIMARY KEY,' \
-                          'name text,' \
-                          'author text,' \
-                          'year integer,' \
-                          'genre text,' \
-                          'publishing text)'
-            cursor.execute(execute_msg)
-
-    def save_book(self, book: Book):
-        if book.bid is None:
-            execute_msg = f'insert into books(id, name, author, year, genre, publishing)' \
-                          f'values ' \
-                          f'    (' \
-                          f'        "%null%",' \
-                          f'        "%{book.name}%",' \
-                          f'        "%{book.author}%",' \
-                          f'        "%{book.year}%",' \
-                          f'        "%{book.genre}%",' \
-                          f'        "%{book.publishing}%"' \
-                          f'    )'
-        else:
-            execute_msg = f'update books' \
-                          f'    set name = "%{book.name}%",' \
-                          f'    author = "%{book.author}%",' \
-                          f'    year ="%{book.year}%",' \
-                          f'    genre = "%{book.genre}%",' \
-                          f'    publishing = "%{book.publishing}%"' \
-                          f'where id = "%{book.bid}%"'
-        with self.__con as cursor:
-            cursor.execute(execute_msg)
-
-    def find_book(self,
+    def save_book(self,
                   bid: int = None,
                   name: str = None,
                   author: str = None,
                   year: int = None,
                   genre: str = None,
-                  publishing: str = None):
-        if bid is not None:
-            execute_msg = f'Select * from books where id = "%{bid}%"'
-        elif name is not None:
-            execute_msg = f'Select * from books where name like "%{name}%"'
-        elif author is not None:
-            execute_msg = f'Select * from books where author like "%{author}%"'
-        elif year is not None:
-            execute_msg = f'Select * from books where year like "%{year}%"'
-        elif genre is not None:
-            execute_msg = f'Select * from books where genre like "%{genre}%"'
-        elif publishing is not None:
-            execute_msg = f'Select * from books where publishing like "%{publishing}%"'
-        else:
-            execute_msg = 'select * from books'
+                  publishing: str = None
+                  ):
+        str_attributes = [name, author, genre, publishing]
+        int_attributes = [bid, year]
 
-        with self.__con as cursor:
-            cursor.execute(execute_msg)
-            books = cursor.fetchall()
-            ans = []
-            for book in books:
-                ans.append(Book(
-                    int(book[0]) if book[0] is not None else book[0],
-                    str(book[1]) if book[1] is not None else book[1],
-                    str(book[2]) if book[2] is not None else book[2],
-                    int(book[3]) if book[3] is not None else book[3],
-                    str(book[4]) if book[4] is not None else book[4],
-                    str(book[5]) if book[5] is not None else book[5]).get_book())
-            return ans
+        for attr in str_attributes:
+            if not isinstance(attr, (str, type(None))):
+                raise TypeError(f'{attr} must be str or None')
+        for attr in int_attributes:
+            if not isinstance(attr, (int, type(None))):
+                raise TypeError(f'{attr} must be int or None')
+        book = Book(bid, name, author, year, genre, publishing)
+        self.__con.write_to_db(
+            book.bid,
+            book.name,
+            book.author,
+            book.year,
+            book.genre,
+            book.publishing
+        )
 
-    def remove(self, book):
-        execute_msg = f'delete from books where id = "%{book.bid}%"'
-        with self.__con as cursor:
-            cursor.execute(execute_msg)
+    def find_book(self,
+                  bid=None,
+                  name=None,
+                  author=None,
+                  year=None,
+                  genre=None,
+                  publishing=None):
+        books = self.__con.find(bid, name, author, year, genre, publishing)
+        ans = []
+        for book in books:
+            ans.append(Book(
+                int(book[0]) if book[0] is not None else book[0],
+                str(book[1]) if book[1] is not None else book[1],
+                str(book[2]) if book[2] is not None else book[2],
+                int(book[3]) if book[3] is not None else book[3],
+                str(book[4]) if book[4] is not None else book[4],
+                str(book[5]) if book[5] is not None else book[5]).get_book())
+        return ans
+
+    def remove(self, bid):
+        self.__con.remove_item(bid)
+
 
 
 if __name__ == '__main__':
