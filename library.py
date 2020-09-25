@@ -13,20 +13,14 @@ class Book:
             genre: str = None,
             publishing: str = None
     ):
-        """
-        Init an instance of Book class
-        :param name: any string
-        :param author: any string
-        :param year: any int
-        :param genre: any string
-        :param publishing: any string
-        """
-        str_attributes = (name, author, genre, publishing)
-        int_attributes = (bid, year)
-        types = (str, type(None))
+
+        str_attributes = [name, author, genre, publishing]
+        int_attributes = [bid, year]
+
         for attrib in str_attributes:
-            if not isinstance(attrib, types):
-                raise TypeError(f'{attrib} must be str')
+            if not isinstance(attrib, (str, type(None))):
+                raise TypeError(f'{attrib} must be str or None')
+
         for attrib in int_attributes:
             if not isinstance(attrib, (int, type(None))):
                 raise TypeError(f'{attrib} must be int or None')
@@ -43,10 +37,6 @@ class Book:
 
     @property
     def name(self):
-        """
-        Property returns book title
-        :return: str
-        """
         return self.__name
 
     @name.setter
@@ -106,9 +96,12 @@ class Library:
     def __init__(self, database):
         if not isinstance(database, str):
             raise TypeError(f'{database} must be str')
+
         if not os.path.exists(database):
             raise ValueError(f'{database} file not exists')
+
         self.__con = DBConnection(database)
+
         with self.__con as cursor:
             execute_msg = 'CREATE TABLE IF NOT EXISTS BOOKS(' \
                           'id integer PRIMARY KEY,' \
@@ -119,17 +112,28 @@ class Library:
                           'publishing text)'
             cursor.execute(execute_msg)
 
-    def get_book(self):
-        pass
-
-    def add_book(self):
-        pass
-
-    def save_book(self):
-        pass
-
-    def load_book(self):
-        pass
+    def save_book(self, book: Book):
+        if book.bid is None:
+            execute_msg = f'insert into books(id, name, author, year, genre, publishing)' \
+                          f'values ' \
+                          f'    (' \
+                          f'        "%null%",' \
+                          f'        "%{book.name}%",' \
+                          f'        "%{book.author}%",' \
+                          f'        "%{book.year}%",' \
+                          f'        "%{book.genre}%",' \
+                          f'        "%{book.publishing}%"' \
+                          f'    )'
+        else:
+            execute_msg = f'update books' \
+                          f'    set name = "%{book.name}%",' \
+                          f'    author = "%{book.author}%",' \
+                          f'    year ="%{book.year}%",' \
+                          f'    genre = "%{book.genre}%",' \
+                          f'    publishing = "%{book.publishing}%"' \
+                          f'where id = "%{book.bid}%"'
+        with self.__con as cursor:
+            cursor.execute(execute_msg)
 
     def find_book(self,
                   bid: int = None,
@@ -167,8 +171,10 @@ class Library:
                     str(book[5]) if book[5] is not None else book[5]).get_book())
             return ans
 
-    def remove(self):
-        pass
+    def remove(self, book):
+        execute_msg = f'delete from books where id = "%{book.bid}%"'
+        with self.__con as cursor:
+            cursor.execute(execute_msg)
 
 
 if __name__ == '__main__':
