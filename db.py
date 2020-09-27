@@ -18,14 +18,10 @@ class DBConnection:
             self.__connection.commit()
 
 
-
 class Connect_sqlite:
     def __init__(self, database):
         if not isinstance(database, str):
             raise TypeError(f'{database} must be str')
-
-        # if not os.path.exists(database):
-        #     raise ValueError(f'{database} file not exists')
 
         self.__connection = DBConnection(database)
 
@@ -43,7 +39,6 @@ class Connect_sqlite:
         book_info = [name, author, year, genre, publishing]
 
         if bid is None:
-            # if year is not None:
             execute_msg = f'insert into books(id, name, author, year, genre, publishing)' \
                           f' values(null, ?, ?, ?, ?, ?)'
             with self.__connection as cursor:
@@ -80,7 +75,6 @@ class Connect_sqlite:
             execute_msg += f' where id = "{bid}"'
 
             with self.__connection as cursor:
-                print(execute_msg)
                 cursor.execute(execute_msg)
 
     def find(self,
@@ -145,7 +139,7 @@ class Connect_sqlite:
     def remove_item(self, bid):
         if not isinstance(bid, int):
             raise TypeError(f'{bid} must be int')
-        execute_msg = f'delete from books where id = "%{bid}%"'
+        execute_msg = f'delete from books where id = "{bid}"'
         with self.__connection as cursor:
             cursor.execute(execute_msg)
 

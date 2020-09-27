@@ -122,13 +122,13 @@ class Library:
             book.publishing
         )
 
-    def find_book(self,
-                  bid=None,
-                  name=None,
-                  author=None,
-                  year=None,
-                  genre=None,
-                  publishing=None):
+    def search_book(self,
+                    bid=None,
+                    name=None,
+                    author=None,
+                    year=None,
+                    genre=None,
+                    publishing=None):
         books = self.__con.find(bid, name, author, year, genre, publishing)
         ans = []
         for book in books:
