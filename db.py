@@ -85,14 +85,16 @@ class Connect_sqlite:
              genre=None,
              publishing=None
              ):
-        str_attributes = [name, author, year, genre, publishing]
+        str_attributes = [name, author, genre, publishing]
+        int_attributes = [bid, year]
 
         for attr in str_attributes:
             if not isinstance(attr, (str, type(None))):
                 raise TypeError(f'{attr} must be str or None')
 
-        if not isinstance(bid, (int, type(None))):
-            raise TypeError(f'{bid} must be int or None')
+        for attr in int_attributes:
+            if not isinstance(attr, (int, type(None))):
+                raise TypeError(f'{attr} must be int or None')
 
         if bid is not None:
             execute_msg = f'Select * from books where id = "%{bid}%"'
