@@ -1,9 +1,11 @@
 import os
+import re
 
 from prettytable import PrettyTable
 
 from conf import Config
 from library import Library
+from builder import FabricDriverBuilder
 
 
 class ConsoleInterface:
@@ -13,6 +15,7 @@ class ConsoleInterface:
         self.__lib = None
         self.__books = []
         self.__bases = []
+        self.__driver = None
         self.main_session()
 
     def search_book(self,
@@ -47,11 +50,44 @@ class ConsoleInterface:
                     publishing=None):
         self.__lib.save_book(bid=bid, name=name, author=author, year=year, genre=genre, publishing=publishing)
 
-    def export_book(self):  # todo
-        pass
+    def export_book(self):
+        exp_books = []
+        fields = ['Name', 'Author', 'Year', 'Genre', 'Publishing']
+        for book in self.__books:
+            exp_book = {}
+            for i, field in enumerate(book[1:]):
+                exp_book.update({fields[i]:field})
+            exp_books.append(exp_book)
+        self.__driver = FabricDriverBuilder.get_driver()
+        if self.__driver is None:
+            return
+        self.__driver.write(exp_books,fields)
 
-    def import_book(self):  # todo
-        pass
+    def import_book(self):
+        imp_books = []
+        fields = ['Name', 'Author', 'Year', 'Genre', 'Publishing']
+        bid = None
+        self.__driver = FabricDriverBuilder.get_driver()
+        if self.__driver is None:
+            return
+        for book in self.__driver.read(fields):
+            imp_book = []
+            for item in book.values():
+                imp_book.append(item)
+            imp_books.append(imp_book)
+        for imp_book in imp_books:
+            if isinstance(imp_book[2], str):
+                year = int(imp_book[2]) if imp_book[2].isdigit() else None
+            elif isinstance(imp_book[2], int):
+                year =imp_book[2]
+            else:
+                year = None
+            self.__lib.save_book(bid=bid,
+                                 name=imp_book[0],
+                                 author=imp_book[1],
+                                 year=year,
+                                 genre=imp_book[3],
+                                 publishing=imp_book[4])
 
     def remove_book(self, bid):
         self.__lib.remove(bid)
@@ -60,23 +96,15 @@ class ConsoleInterface:
         self.__bases = self.__conf.get_bases()
 
     def change_lib_db(self, db_filename):
-        self.__conf.change_default_base(db_filename)
+        self.__conf.change_current_base(db_filename)
         self.__db_filename = self.__conf.read_conf()
+        print(f'Connecting to {self.__db_filename}')
+        self.__lib = Library(self.__db_filename)
 
-    def add_lib_db(self):
-        while True:
-            db_filename = input('Insert DB file name '
-                                'or press Enter to exit: ')
-            if db_filename == '' or db_filename is None:
-                return
-            elif not db_filename.endswith('.db'):
-                db_filename += '.db'
-                break
+    def add_lib_db(self, db_filename):
+        if not db_filename.endswith('.db'):
+            db_filename += '.db'
         self.__conf.add_base(db_filename)
-        yes = ['y', 'yes']
-        answer = input(f'Insert {yes[0]} or {yes[1]} to connect to the {db_filename}: ')
-        if answer in yes:
-            self.__conf.change_default_base(db_filename)
 
     def get_conf(self):
         self.__conf = Config()
@@ -110,13 +138,13 @@ class ConsoleInterface:
 
     def print_lib_db(self):
         pretty_bases = PrettyTable()
-        pretty_bases.field_names = ['N', 'BD file name']
+        pretty_bases.field_names = ['DB ID', 'BD file name']
         for i, base in enumerate(self.__bases):
-            pretty_bases.add_row([i, base])
+            pretty_bases.add_row([i + 1, base])
         print(pretty_bases)
 
     def book_menu(self):
-        __book_menu_items = ['Export books', 'Change book']
+        __book_menu_items = ['Export books', 'Change book', 'Remove book']
         __menu_len = len(__book_menu_items)
         self.print_books()
         while True:
@@ -128,40 +156,27 @@ class ConsoleInterface:
             if choice == '' or choice is None:
                 continue
             elif choice.isdigit():
-                try:
-                    choice = int(choice) - 1
-                except:
-                    print('It must be int')
-                    continue
-                if choice == -1:
-                    break
+                choice = int(choice) - 1
                 if choice == 0:
-                    for book in self.__books:
-                        self.export_book(book)
-                        break
+                    self.export_book()
                 elif choice == 1:
                     self.change_book_menu()
                     break
+                elif choice == 2:
+                    self.remove_book_menu()
+                    break
+                elif choice == -1:
+                    break
         self.__books = []
 
-    def change_book_menu(self):
+    def add_book_menu(self):
         while True:
-            bid = input('Please, enter BookID of book to modify: ')
-            if bid.isdigit():
-                try:
-                    bid = int(bid)
-                except:
-                    print('It must be int')
-                    continue
-
             name = input('insert an name of book: ')
             if name == '' or name is None:
                 name = None
-
             author = input('insert an author of book: ')
             if author == '' or author is None:
                 author = None
-
             while True:
                 year = input('insert an year of book: ')
                 if year == '' or year is None:
@@ -182,12 +197,81 @@ class ConsoleInterface:
                 publishing = None
 
             yes = ['y', 'yes']
-            print()
-            answer = input(f'Insert {yes[0]} or {yes[1]} to continue or any key to try again: ')
-            if answer in yes:
-                self.change_book(bid, name=name, author=author, year=year, genre=genre, publishing=publishing)
-                break
+            attributes = [name, author, year, genre, publishing]
+            if len([attr for attr in attributes if attr is not None]):
+                print(f'Name: {name}, '
+                      f'Author: {author}, '
+                      f'Year: {year}, '
+                      f'Genre: {genre}, '
+                      f'Publishing: {publishing}')
+                answer = input(f'Insert {yes[0]} or {yes[1]} to continue or any key to try again: ')
+                if answer in yes:
+                    self.add_book(name=name, author=author, year=year, genre=genre, publishing=publishing)
+                    break
+            print('Some attribute must be not None')
 
+    def change_book_menu(self):
+        while True:
+            bid = input('Please, enter BookID of book to modify or q to return: ')
+            if bid.isdigit():
+                bid = int(bid)
+            elif bid == 'q':
+                break
+            else:
+                print('Bad BookId, try again')
+                continue
+            name = input('insert an name of book: ')
+            if name == '' or name is None:
+                name = None
+            author = input('insert an author of book: ')
+            if author == '' or author is None:
+                author = None
+            while True:
+                year = input('insert an year of book: ')
+                if year == '' or year is None:
+                    year = None
+                    break
+                elif year.isdigit():
+                    year = int(year)
+                    break
+                else:
+                    print('year must be int')
+
+            genre = input('insert an genre of book : ')
+            if genre == '' or genre is None:
+                genre = None
+
+            publishing = input('insert an publishing of book: ')
+            if publishing == '' or publishing is None:
+                publishing = None
+
+            yes = ['y', 'yes']
+            attributes = [name, author, year, genre, publishing]
+            if len([attr for attr in attributes if attr is not None]):
+                print(f'BookID={bid}, '
+                      f'Name: {name}, '
+                      f'Author: {author}, '
+                      f'Year: {year}, '
+                      f'Genre: {genre}, '
+                      f'Publishing: {publishing}')
+                answer = input(f'Insert {yes[0]} or {yes[1]} to continue or any key to try again: ')
+                if answer in yes:
+                    self.change_book(bid, name=name, author=author, year=year, genre=genre, publishing=publishing)
+                    break
+            print('Some attribute must be not None')
+
+    def remove_book_menu(self):
+        while True:
+            bid = input('Please, enter BookID of book to remove or q to return: ')
+            if bid.isdigit():
+                bid = int(bid)
+                self.remove_book(bid)
+                break
+            elif bid == 'q':
+                break
+            else:
+                print('Bad BookId, try again')
+                continue
 
     def get_all_books(self):
         self.__books = self.__lib.search_book()
@@ -206,11 +290,7 @@ class ConsoleInterface:
             if choice == '' or choice is None:
                 continue
             elif choice.isdigit():
-                try:
-                    choice = int(choice) - 1
-                except:
-                    print('It must be int')
-                    continue
+                choice = int(choice) - 1
                 if choice == -1:
                     self.__books = []
                     print('Return to main menu\n')
@@ -297,24 +377,56 @@ class ConsoleInterface:
             if choice == '' or choice is None:
                 continue
             elif choice.isdigit():
-                try:
-                    choice = int(choice) - 1
-                except:
-                    print('It must be int')
-                    continue
+                choice = int(choice) - 1
                 if choice == -1:
                     print('Return to main menu\n')
                     break
                 elif 0 <= choice < len(__options_menu_items):
                     print(__options_menu_items[choice])
                     if choice == 0:
-                        self.add_lib_db()
+                        self.add_lib_menu()
                     elif choice == 1:
-                        self.change_lib_db()
+                        self.change_lib_menu()
                     continue
                 print(f'\nTry again it must be int from 1 to {__menu_len}\n')
             else:
                 print(f'\nTry again it must be int from 1 to {__menu_len}\n')
+
+    def change_lib_menu(self):
+        self.__bases = self.__conf.get_bases()
+        bases_count = len(self.__bases)
+        while True:
+            self.print_lib_db()
+            choice = input('Enter DB ID or 0 to return: ')
+            if choice.isdigit():
+                choice = int(choice) - 1
+                if choice == -1:
+                    break
+                elif 0 <= choice < bases_count:
+                    self.change_lib_db(self.__bases[choice])
+                    self.__bases = []
+                    break
+            print('Try again')
+
+    def add_lib_menu(self):
+        pattern = '[\w]+'
+        while True:
+            db_filename = input('Enter DB name or 0 to return: ')
+            if db_filename.isdigit():
+                db_filename = int(db_filename)
+                if db_filename == 0:
+                    return
+            if re.match(pattern, db_filename) is None:
+                print('Bad name, try again')
+                continue
+            self.add_lib_db(db_filename)
+            break
+        yes = ['y', 'yes']
+        while True:
+            answer = input(f'Insert {yes[0]}/{yes[1]} to connect to {db_filename}: ')
+            if answer in yes:
+                self.change_lib_menu()
+                return
 
     def menu(self):
         __main_menu_items = ['Get all books', 'Search book', 'Add new book', 'Import books', 'Options']
@@ -327,11 +439,7 @@ class ConsoleInterface:
             if choice == '' or choice is None:
                 continue
             elif choice.isdigit():
-                try:
-                    choice = int(choice) - 1
-                except:
-                    print('It must be int')
-                    continue
+                choice = int(choice) - 1
                 if choice == -1:
                     print('Goodbye')
                     raise SystemExit
@@ -342,9 +450,9 @@ class ConsoleInterface:
                     elif choice == 1:
                         self.search_book_menu()
                     elif choice == 2:
-                        pass
+                        self.add_book_menu()
                     elif choice == 3:
-                        pass
+                        self.import_book()
                     elif choice == 4:
                         self.options_menu()
                     continue

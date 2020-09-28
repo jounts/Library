@@ -41,7 +41,7 @@ class Config:
         except KeyError:
             return
 
-    def change_default_base(self, db_filename):
+    def change_current_base(self, db_filename):
         for base in self.__conf_parser.items(self.__bases):
             if base[1] == 'True':
                 self.__conf_parser.set(self.__bases, base[0], 'False')
