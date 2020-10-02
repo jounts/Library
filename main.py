@@ -79,7 +79,7 @@ class ConsoleInterface:
             if isinstance(imp_book[2], str):
                 year = int(imp_book[2]) if imp_book[2].isdigit() else None
             elif isinstance(imp_book[2], int):
-                year =imp_book[2]
+                year = imp_book[2]
             else:
                 year = None
             self.__lib.save_book(bid=bid,
@@ -121,9 +121,11 @@ class ConsoleInterface:
                     break
                 elif not db_filename.endswith('.db'):
                     db_filename += '.db'
+                    self.__db_filename = db_filename
                     break
             self.__conf.create_new_conf(self.__db_filename)
             print(f'{self.__db_filename} created')
+            self.__db_filename = self.__conf.read_conf()
         else:
             self.__db_filename = db_filename
             print(f'Connecting to {self.__db_filename}')
@@ -427,6 +429,8 @@ class ConsoleInterface:
             if answer in yes:
                 self.change_lib_menu()
                 return
+            else:
+                break
 
     def menu(self):
         __main_menu_items = ['Get all books', 'Search book', 'Add new book', 'Import books', 'Options']
