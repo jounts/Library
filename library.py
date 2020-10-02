@@ -103,15 +103,7 @@ class Library:
                   genre: str = None,
                   publishing: str = None
                   ):
-        str_attributes = [name, author, genre, publishing]
-        int_attributes = [bid, year]
 
-        for attr in str_attributes:
-            if not isinstance(attr, (str, type(None))):
-                raise TypeError(f'{attr} must be str or None')
-        for attr in int_attributes:
-            if not isinstance(attr, (int, type(None))):
-                raise TypeError(f'{attr} must be int or None')
         book = Book(bid, name, author, year, genre, publishing)
         self.__con.write_to_db(
             book.bid,
@@ -143,7 +135,6 @@ class Library:
 
     def remove(self, bid):
         self.__con.remove_item(bid)
-
 
 
 if __name__ == '__main__':
