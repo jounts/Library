@@ -4,8 +4,8 @@ import re
 from prettytable import PrettyTable
 
 from conf import Config
-from library import Library
 from builder import FabricDriverBuilder
+from library import Library
 
 
 class ConsoleInterface:
@@ -56,12 +56,12 @@ class ConsoleInterface:
         for book in self.__books:
             exp_book = {}
             for i, field in enumerate(book[1:]):
-                exp_book.update({fields[i]:field})
+                exp_book.update({fields[i]: field})
             exp_books.append(exp_book)
         self.__driver = FabricDriverBuilder.get_driver()
         if self.__driver is None:
             return
-        self.__driver.write(exp_books,fields)
+        self.__driver.write(exp_books, fields)
 
     def import_book(self):
         imp_books = []
