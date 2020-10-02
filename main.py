@@ -3,9 +3,9 @@ import re
 
 from prettytable import PrettyTable
 
-from conf import Config
-from builder import FabricDriverBuilder
-from library import Library
+from common.conf import Config
+from common.builder import FabricDriverBuilder
+from model.library import Library
 
 
 class ConsoleInterface:
